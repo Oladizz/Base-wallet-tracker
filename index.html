@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BASE Gas Tracker - Futuristic</title>
+
+<!-- Import futuristic fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+
+<style>
+/* Base resets */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  user-select: none;
+}
+
+body {
+  background: #010820; /* very dark blue */
+  color: #cfd8dc;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 200%;
+  width: 100%;
+  background: #041426;
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  box-shadow:
+    0 0 20px #0066ffaa,
+    inset 0 0 10px #003366cc;
+}
+
+h1, h2, h3 {
+  color: #0ff;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 8px #00ccffaa;
+  letter-spacing: 1.5px;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 1rem 1.2rem;
+  font-size: 1.15rem;
+  border-radius: 10px;
+  border: 2px solid #0077ff;
+  background: #011a40;
+  color: #0ff;
+  box-shadow: 0 0 8px #0099ff88;
+  transition: border-color 0.3s ease;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: #00f3ff;
+  box-shadow: 0 0 15px #00eaffcc;
+}
+
+.buttons {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+button {
+  background: linear-gradient(45deg, #0040ff, #00eaff);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #001b33;
+  cursor: pointer;
+  box-shadow:
+    0 0 10px #00cfffbb,
+    inset 0 0 8px #0077ffcc;
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+button:hover {
+  background: linear-gradient(45deg, #00eaff, #0040ff);
+  color: #f0faff;
+  box-shadow:
+    0 0 15px #00ffffdd,
+    inset 0 0 10px #0099ffdd;
+}
+
+button:active {
+  transform: scale(0.95);
+  box-shadow:
+    0 0 8px #00bbffaa,
+    inset 0 0 6px #0066ffaa;
+}
+
+#output {
+  margin-top: 2rem;
+  background: #011529;
+  border-radius: 12px;
+  padding: 1.8rem 2rem;
+  box-shadow:
+    0 0 18px #0099ffcc,
+    inset 0 0 12px #003366cc;
+  color: #a0d8ff;
+  font-size: 1rem;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+/* Transactions Table */
+
+#output table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  color: #0ff;
+  font-family: 'Courier New', Courier, monospace;
+  box-shadow: 0 0 15px #00bfff55;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#output thead tr {
+  background: #003366;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+#output th, #output td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #005599aa;
+  text-align: left;
+}
+
+#output tbody tr {
+  background: #012840;
+  transition: background 0.25s ease;
+  cursor: default;
+}
+
+#output tbody tr:hover {
+  background: #0055ff33;
+}
+
+#output tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Horizontal scroll for table container */
+#output > div {
+  overflow-x: auto;
+  border-radius: 8px;
+  padding-bottom: 0.5rem;
+}
+
+/* Copy button inside table */
+.copy-btn {
+  background: #0077ffcc;
+  color: #001b33;
+  border-radius: 8px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 0 6px #0099ffaa;
+  user-select: none;
+  transition: background 0.3s ease;
+}
+
+.copy-btn:hover {
+  background: #00d0ffdd;
+  color: #000a11;
+  box-shadow: 0 0 8px #00eaffee;
+}
+
+.copy-btn:active {
+  transform: scale(0.95);
+}
+
+/* Tooltip on shortened addresses */
+td[title] {
+  position: relative;
+  cursor: help;
+}
+
+td[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: 50%;
+  bottom: 110%;
+  transform: translateX(-50%);
+  background: #0055ffdd;
+  color: #e0f7ff;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  box-shadow: 0 0 12px #00bfffcc;
+  pointer-events: none;
+  z-index: 99;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .buttons {
+    flex-direction: column;
+  }
+  button {
+    width: 100%;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="container" role="main" aria-label="Base Gas Tracker">
+  <h1>BASE Network Gas Tracker</h1>
+
+  <label for="walletInput">Enter Wallet Address</label>
+  <input
+    type="text"
+    id="walletInput"
+    placeholder="0xabc123... (Ethereum style address)"
+    autocomplete="off"
+    spellcheck="false"
+  />
+
+  <div>
+    <button id="fetchBtn" aria-label="Fetch Gas Data">Fetch Gas Data</button>
+    <button id="clearBtn" aria-label="Clear Output">Clear</button>
+  </div>
+
+  <div id="output" class="output" aria-live="polite" aria-atomic="true">
+    Enter a wallet address above and click Fetch Gas Data.
+  </div>
+
+  <div class="footer-note">
+  Powered by <strong>Basescan API</strong>  
+  <br />
+  Backed by <strong>CHZ</strong> and Base  
+  <br />
+  Designed by <span style="font-family: 'Times New Roman', serif; font-weight: bold;">𝕆𝕃𝔸𝔻𝕀ℤℤ</span> —  
+  <a href="https://twitter.com/Oladizz01" target="_blank" rel="noopener noreferrer">𝕆𝕃𝔸𝔻𝕀ℤℤ</a>
+</div>
+
+<script>
+const API_KEY = 'B93PFHQ33YHX6KXUS8DMPYIY6YZ1MB67BJ';
+
+const input = document.getElementById('walletInput');
+const btn = document.getElementById('fetchBtn');
+const clearBtn = document.getElementById('clearBtn');
+const output = document.getElementById('output');
+
+function shortenAddress(address) {
+  if (!address || address.length < 12) return address;
+  return address.substring(0, 6) + '...' + address.substring(address.length - 6);
+}
+
+function formatEth(bigint) {
+  return (Number(bigint) / 1e18).toFixed(6);
+}
+
+function formatGwei(bigint) {
+  return (Number(bigint) / 1e9).toFixed(2);
+}
+
+function formatDate(timestamp) {
+  return new Date(timestamp * 1000).toLocaleString();
+}
+
+async function fetchEthPrice() {
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usdt');
+    const json = await res.json();
+    return json.ethereum.usdt || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function copyToClipboard(text, button) {
+  if (!navigator.clipboard) {
+    alert('Clipboard not supported');
+    return;
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    button.textContent = 'Copied!';
+    setTimeout(() => button.textContent = 'Copy', 1500);
+  });
+}
+
+async function fetchGasData(wallet) {
+  output.textContent = 'Fetching data, please wait...';
+
+  const url = `https://api.basescan.org/api?module=account&action=txlist&address=${wallet}&startblock=0&endblock=99999999&sort=asc&apikey=${API_KEY}`;
+
+  try {
+    const response = await fetch(url);
+    const json = await response.json();
+
+    if (json.status !== '1') {
+      output.textContent = `API error: ${json.message}`;
+      return;
+    }
+
+    const txs = json.result;
+    const txCount = txs.length;
+
+    if (txCount === 0) {
+      output.textContent = 'No transactions found.';
+      return;
+    }
+
+    let totalGas = 0n;
+    for (const tx of txs) {
+      totalGas += BigInt(tx.gasUsed) * BigInt(tx.gasPrice);
+    }
+
+    const ethPrice = await fetchEthPrice();
+    const totalGasEth = Number(totalGas) / 1e18;
+    const totalGasUSDT = (totalGasEth * ethPrice).toFixed(2);
+
+    // Last 5 transactions (latest)
+    const last5 = txs.slice(-5).reverse();
+
+    let txHTML = `
+      <h3>Last 5 Transactions</h3>
+      <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Hash</th>
+            <th>Date</th>
+            <th>Gas Used</th>
+            <th>Gas Price (Gwei)</th>
+            <th>Copy</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    for (const tx of last5) {
+      const shortHash = shortenAddress(tx.hash);
+      txHTML += `
+        <tr>
+          <td title="${tx.hash}" style="font-family: monospace;">${shortHash}</td>
+          <td>${formatDate(Number(tx.timeStamp))}</td>
+          <td>${tx.gasUsed}</td>
+          <td>${formatGwei(tx.gasPrice)}</td>
+          <td><button class="copy-btn" data-hash="${tx.hash}">Copy</button></td>
+        </tr>
+      `;
+    }
+
+    txHTML += `</tbody></table></div>`;
+
+    output.innerHTML = `
+      <div style="margin-bottom:1rem;">
+        <strong>Wallet:</strong> ${shortenAddress(wallet)}<br />
+        <strong>Transactions:</strong> ${txCount}<br />
+        <strong style="color:#0ff; text-shadow: 0 0 6px #0ff;">Total Gas Used:</strong> 
+        <span style="background: #012; padding: 0.2rem 0.5rem; border-radius: 8px; box-shadow: 0 0 8px #0ff;">
+          ${formatEth(totalGas)} ETH
+        </span><br />
+        <strong>Total Gas Cost in USDT:</strong> $${totalGasUSDT}
+      </div>
+      ${txHTML}
+    `;
+
+    // Add event listeners to copy buttons
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => copyToClipboard(btn.dataset.hash, btn));
+    });
+
+  } catch (err) {
+    output.textContent = `Request failed: ${err.message}`;
+  }
+}
+
+btn.addEventListener('click', () => {
+  const wallet = input.value.trim();
+  if (!wallet) {
+    output.textContent = 'Please enter a valid wallet address.';
+    return;
+  }
+  fetchGasData(wallet);
+});
+
+clearBtn.addEventListener('click', () => {
+  input.value = '';
+  output.textContent = '';
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,209 @@
+
+/* Base resets */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  user-select: none;
+}
+
+body {
+  background: #010820; /* very dark blue */
+  color: #cfd8dc;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 200%;
+  width: 100%;
+  background: #041426;
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  box-shadow:
+    0 0 20px #0066ffaa,
+    inset 0 0 10px #003366cc;
+}
+
+h1, h2, h3 {
+  color: #0ff;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 8px #00ccffaa;
+  letter-spacing: 1.5px;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 1rem 1.2rem;
+  font-size: 1.15rem;
+  border-radius: 10px;
+  border: 2px solid #0077ff;
+  background: #011a40;
+  color: #0ff;
+  box-shadow: 0 0 8px #0099ff88;
+  transition: border-color 0.3s ease;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: #00f3ff;
+  box-shadow: 0 0 15px #00eaffcc;
+}
+
+.buttons {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+button {
+  background: linear-gradient(45deg, #0040ff, #00eaff);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #001b33;
+  cursor: pointer;
+  box-shadow:
+    0 0 10px #00cfffbb,
+    inset 0 0 8px #0077ffcc;
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+button:hover {
+  background: linear-gradient(45deg, #00eaff, #0040ff);
+  color: #f0faff;
+  box-shadow:
+    0 0 15px #00ffffdd,
+    inset 0 0 10px #0099ffdd;
+}
+
+button:active {
+  transform: scale(0.95);
+  box-shadow:
+    0 0 8px #00bbffaa,
+    inset 0 0 6px #0066ffaa;
+}
+
+#output {
+  margin-top: 2rem;
+  background: #011529;
+  border-radius: 12px;
+  padding: 1.8rem 2rem;
+  box-shadow:
+    0 0 18px #0099ffcc,
+    inset 0 0 12px #003366cc;
+  color: #a0d8ff;
+  font-size: 1rem;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+/* Transactions Table */
+
+#output table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  color: #0ff;
+  font-family: 'Courier New', Courier, monospace;
+  box-shadow: 0 0 15px #00bfff55;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#output thead tr {
+  background: #003366;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+#output th, #output td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #005599aa;
+  text-align: left;
+}
+
+#output tbody tr {
+  background: #012840;
+  transition: background 0.25s ease;
+  cursor: default;
+}
+
+#output tbody tr:hover {
+  background: #0055ff33;
+}
+
+#output tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Horizontal scroll for table container */
+#output > div {
+  overflow-x: auto;
+  border-radius: 8px;
+  padding-bottom: 0.5rem;
+}
+
+/* Copy button inside table */
+.copy-btn {
+  background: #0077ffcc;
+  color: #001b33;
+  border-radius: 8px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 0 6px #0099ffaa;
+  user-select: none;
+  transition: background 0.3s ease;
+}
+
+.copy-btn:hover {
+  background: #00d0ffdd;
+  color: #000a11;
+  box-shadow: 0 0 8px #00eaffee;
+}
+
+.copy-btn:active {
+  transform: scale(0.95);
+}
+
+/* Tooltip on shortened addresses */
+td[title] {
+  position: relative;
+  cursor: help;
+}
+
+td[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: 50%;
+  bottom: 110%;
+  transform: translateX(-50%);
+  background: #0055ffdd;
+  color: #e0f7ff;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  box-shadow: 0 0 12px #00bfffcc;
+  pointer-events: none;
+  z-index: 99;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .buttons {
+    flex-direction: column;
+  }
+  button {
+    width: 100%;
+  }
+}
