@@ -3,3 +3,5 @@ python-dotenv
 web3
 pydantic
 matplotlib
+Flask
+gunicorn

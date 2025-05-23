@@ -60,7 +60,7 @@ def get_account_normal_transactions(
     page: int = 1, 
     offset: int = 200, 
     sort: str = 'desc'
-) -> List[Dict[str, Any]]:
+) -> tuple[List[Dict[str, Any]], Optional[str]]:
     """
     Fetches 'Normal' transaction history for a given wallet address from the Basescan API.
 
@@ -74,7 +74,9 @@ def get_account_normal_transactions(
         sort: The sorting order ('asc' or 'desc').
 
     Returns:
-        A list of transaction dictionaries if successful, otherwise an empty list.
+        A tuple containing:
+            - A list of transaction dictionaries if successful.
+            - An optional error message string if an API error occurred (excluding "No transactions found" if that's a valid empty response).
     """
     params = {
         "module": "account",
@@ -98,29 +100,34 @@ def get_account_normal_transactions(
         # and result as a list of transactions.
         # If no transactions, status is "1", message "No transactions found", result is an empty list.
         # If API key is invalid, status is "0", message "NOTOK", result is "Invalid API Key".
-        if data.get("status") == "1":
+        if data.get("status") == "1": # Success
             if isinstance(data.get("result"), list):
-                return data["result"]
+                return data["result"], None # No error message
             else: # Should not happen if status is "1" and message is "OK"
-                print(f"Warning: Basescan API reported success but 'result' was not a list: {data.get('result')}")
-                return []
-        elif data.get("status") == "0" and data.get("message") == "No transactions found":
-            # This is a valid scenario, just means no transactions for the address/block range
-            return []
-        else:
-            error_message = data.get("result") or data.get("message", "Unknown API error")
-            print(f"Warning: Basescan API error for address {wallet_address}. Message: {error_message}")
-            return []
+                err_msg = f"Basescan API reported success but 'result' was not a list: {data.get('result')}"
+                print(f"Warning: {err_msg}")
+                return [], err_msg
+        # Specific check for "No transactions found" which Basescan might return with status "0" or "1"
+        elif data.get("message") == "No transactions found": # Covers status "0" or "1" if message is this
+            return [], None # Valid empty response, no error message
+        else: # Actual API error
+            error_message_detail = data.get("result") or data.get("message", "Unknown API error")
+            err_msg = f"Basescan API error for address {wallet_address}. Message: {error_message_detail}"
+            print(f"Warning: {err_msg}")
+            return [], err_msg
 
     except requests.exceptions.RequestException as e:
-        print(f"Network error while calling Basescan API for address {wallet_address}: {e}")
-        return []
+        err_msg = f"Network error while calling Basescan API for address {wallet_address}: {e}"
+        print(err_msg)
+        return [], err_msg
     except ValueError as e:  # Includes JSONDecodeError
-        print(f"Error parsing Basescan API response for address {wallet_address}: {e}")
-        return []
+        err_msg = f"Error parsing Basescan API response for address {wallet_address}: {e}"
+        print(err_msg)
+        return [], err_msg
     except Exception as e:
-        print(f"An unexpected error occurred while fetching transactions for {wallet_address}: {e}")
-        return []
+        err_msg = f"An unexpected error occurred while fetching transactions for {wallet_address}: {e}"
+        print(err_msg)
+        return [], err_msg
 
 if __name__ == '__main__':
     # This part is for testing the function directly
@@ -151,18 +158,21 @@ if __name__ == '__main__':
             print("Please set the TEST_WALLET_ADDRESS environment variable to test transaction fetching.")
         else:
             print(f"Fetching transactions for wallet: {test_wallet_address_env} using API key prefix: {basescan_api_key_env[:5]}...")
-            transactions = get_account_normal_transactions(
+            transactions, error = get_account_normal_transactions(
                 api_key=basescan_api_key_env, 
                 wallet_address=test_wallet_address_env,
-                offset=2, # Get 2 transactions for brevity
+                offset=2, 
                 sort='desc'
             )
 
+            if error:
+                print(f"Test Error: {error}")
+
             if transactions:
                 print(f"\nSuccessfully fetched {len(transactions)} transactions:")
-                for i, tx in enumerate(transactions[:2]): # Print first 2
+                for i, tx in enumerate(transactions[:2]): 
                     print(f"  Transaction {i+1} Hash: {tx.get('hash')}")
-            elif isinstance(transactions, list) and not transactions:
-                 print("No transactions found for the address, or the API returned an empty list as expected.")
-            else:
-                print("Failed to retrieve transactions or an error occurred (see warnings above).")
+            elif not error: # No error, but no transactions
+                 print("No transactions found for the address (and no API error).")
+            else: # Error and no transactions
+                print("Failed to retrieve transactions due to an error (see above).")

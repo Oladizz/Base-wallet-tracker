@@ -111,6 +111,7 @@ We will use Pydantic models for data validation and structure.
 *   **`python-dotenv`**: For managing environment variables (like API keys).
 *   **`pydantic`**: For data validation, settings management, and defining data models like `BaseTransaction`.
 *   **`web3.py`**: For interacting with Ethereum-compatible blockchains, used here for Base L2 gas price.
+*   **`Flask`**: For serving the web frontend.
 
 ## 5. Modules and Key Components
 
@@ -119,20 +120,54 @@ We will use Pydantic models for data validation and structure.
 *   **`base_rpc.py`**: Handles communication with Base L2 RPC endpoints (for Base L2 gas prices using `web3.py`).
 *   **`basescan_api.py`**: Handles communication with the Basescan API (for Base L2 transaction history).
 *   **`models.py`**: Defines Pydantic data models, currently `BaseTransaction`.
-*   **`utils.py`**: Provides utility functions, such as Wei to Ether/Gwei string/Decimal conversions and fiat value calculation.
-*   **`graph_generator.py`**: Responsible for generating a Matplotlib graph of daily gas spending.
+*   **`utils.py`**: Provides utility functions (Wei conversions, fiat calculation).
+*   **`graph_generator.py`**: Generates Matplotlib graphs.
+*   **`app.py`**: Flask application file, serving the web interface.
+
+### Key Functions Refactoring in `tracker.py`
+
+The core data processing logic in `tracker.py` has been refactored into a main function:
+*   `get_wallet_gas_report(wallet_address: str) -> dict`: This function orchestrates all data fetching (transactions, current gas prices, ETH price), processing, summary calculations (ETH and USD values), and graph generation. It saves the graph to `static/images/` with a unique name and returns a dictionary containing all data required by the web frontend.
 
 ## 6. Configuration Management
 
-*   **API Keys & URLs:** Stored in a `.env` file. Refer to `.env.example` for all required variables.
-    Key variables include:
+To run the application, you'll need to provide your own API keys and settings. This is done using a `.env` file in the project root.
+
+**Steps to set up your environment:**
+
+1.  **Create a `.env` file**:
+    You can create this file by copying either the provided template files. Choose one:
+    *   Copy `.env.example`: 
+        ```bash
+        cp .env.example .env
+        ```
+    *   Or, copy `configuration.template.env`:
+        ```bash
+        cp configuration.template.env .env
+        ```
+    Both template files contain the same placeholder content.
+
+2.  **Edit the `.env` file**:
+    Open the newly created `.env` file with a text editor. You will see placeholder values like `YourEtherscanApiKeyTokenHere`. 
+    Replace these placeholders with your actual API keys and desired settings. For example:
     ```dotenv
-    ETHERSCAN_API_KEY="YOUR_ETHERSCAN_API_KEY"
-    BASE_RPC_URL="YOUR_BASE_RPC_URL" 
-    BASESCAN_API_KEY="YOUR_BASESCAN_API_KEY"
-    TEST_WALLET_ADDRESS="YOUR_TEST_BASE_WALLET_ADDRESS" # Optional, for testing
+    # Etherscan API Key (if using Ethereum features)
+    ETHERSCAN_API_KEY=YOUR_ACTUAL_ETHERSCAN_API_KEY_HERE
+
+    # Base Blockchain RPC URL
+    BASE_RPC_URL=https://mainnet.base.org # Or your preferred Base RPC URL
+
+    # Basescan API Key
+    BASESCAN_API_KEY=YOUR_ACTUAL_BASESCAN_API_KEY_HERE
+
+    # Test Wallet Address (optional, for testing transaction fetching)
+    TEST_WALLET_ADDRESS=YOUR_ACTUAL_TEST_WALLET_ADDRESS_HERE
     ```
-*   The `python-dotenv` library is used to load these.
+
+3.  **Do Not Commit `.env`**: 
+    The `.env` file contains your secret API keys and should **never** be committed to version control (e.g., Git). The project's `.gitignore` file is already configured to ignore `.env` files, so you don't need to do anything extra here, but it's crucial to be aware of this.
+
+The application uses the `python-dotenv` library to automatically load these variables from the `.env` file when it runs.
 
 ## 7. Features
 
@@ -223,23 +258,60 @@ When `tracker.py` is run with `TEST_WALLET_ADDRESS` and `BASESCAN_API_KEY` confi
     *   All fetched transactions ("all time").
 3.  If transaction data is available, it generates:
     *   A PNG image file (`gas_spending_last_30_days.png`).
-    *   A PDF document (`gas_spending_last_30_days.pdf`).
-    Both files visualize daily gas expenses over the last 30 days.
+    *   A PDF document (`gas_spending_last_30_days.pdf`). (Note: PDF generation is primarily for CLI use; the web frontend displays the PNG).
+    Both files visualize daily gas expenses.
 
-Example output snippet for transaction details:
-```
-Transaction 1:
-  Hash: 0xabcdef...
-  Timestamp: 2023-10-26 12:30:00 (Original: 1698318600)
-  From: 0xfromAddress...
-  To: 0xtoAddress...
-  Value (Wei): 0.10 ETH (Original Wei: 100000000000000000)
-  Gas Used: 21000, Gas Price: 1 Gwei (Original Wei: 1000000000)
-  Calculated Gas Fee: 0.000021 ETH (Original Wei: 21000000000000)
-  Is Error: 0, TxReceipt Status: 1
-```
+### Web Interface Styling
 
-Example output for gas fee aggregation:
+The web frontend (`index.html`, `results.html`) is styled using `static/style.css`. This CSS file implements a "black and tech blue neon" theme:
+*   **Overall Theme**: Dark grey/black backgrounds with light grey or neon blue text.
+*   **Font**: Modern sans-serif.
+*   **Neon Elements**: Headings, links, borders, and interactive elements use bright neon blue (`#00bfff`, `#00ffff`) with text/box shadows to simulate a glow.
+*   **Forms**: Input fields and buttons are styled with dark backgrounds and neon borders/text, including hover effects.
+*   **Tables**: Styled with neon blue accents for borders and headers.
+*   **Error Messages**: Displayed with a distinct neon red color.
+*   **Responsiveness**: Basic media queries are included to improve readability and usability on smaller screens, including a stacked layout for tables.
+
+### Web Interface Routes
+
+*   **`/` (GET)**: Serves the main page (`templates/index.html`) where users can input a wallet address.
+*   **`/track` (POST)**:
+    *   Accepts a `wallet_address` from the form submission.
+    *   Calls `tracker.get_wallet_gas_report(wallet_address)` to get all processed data.
+    *   Renders `templates/results.html`, passing the report data (including wallet address, gas summaries in ETH & USD, recent transactions, and the URL to the gas spending graph) to the template.
+    *   If no wallet address is provided, it redirects back to the home page.
+    *   Includes basic validation for the wallet address format. If validation fails, an error message is displayed on the `index.html` page.
+
+### Error Handling and User Feedback
+
+The application incorporates several mechanisms to provide feedback and report errors:
+*   **Input Validation**: The wallet address submitted via the form on `index.html` is validated for basic format (starts with '0x', length 42). If it fails, `index.html` re-renders with an error message.
+*   **API/Backend Errors**: If errors occur during backend processing (e.g., API key issues, network problems, inability to fetch data from Basescan/RPC, graph generation failures), these are collected in an `error_messages` list.
+*   **Display on Results Page**:
+    *   The `results.html` page will always attempt to render.
+    *   If any errors were collected in `error_messages` by the backend, they are displayed prominently at the top of the `results.html` page, typically styled in neon red.
+    *   Sections for which data could not be fetched (e.g., gas summary, transaction list, graph) will either display default values (like "0.00 ETH", "$0.00 USD"), specific messages like "No transactions found...", "Gas spending graph is not available.", or indicate "N/A" or "Error fetching price" for specific data points.
+    *   This ensures the user is informed about any issues without breaking the page.
+
+The `results.html` page displays the following information, structured into sections:
+*   **Queried Wallet Address**: The address submitted by the user.
+*   **Current L2 Gas Price**: Fetched from Base RPC (e.g., "0.05 Gwei").
+*   **Current ETH Price**: Fetched from Basescan (e.g., "$2000.00 USD").
+*   **Gas Fee Summary**:
+    *   Total gas fees spent "All Time" (based on fetched transactions), "Last 30 Days", and "Last 7 Days".
+    *   Each period shows the amount in ETH and its approximate USD equivalent (if ETH price is available).
+*   **Gas Spending Graph**: A line graph visualizing daily gas expenses in Gwei over the last 30 days (PNG image). Displayed if data is available.
+*   **Recent Transactions (Up to 20)**: A table listing:
+    *   **Hash**: Transaction hash, linked to its page on Basescan. Displayed as a shortened string.
+    *   **Timestamp**: Date and time of the transaction.
+    *   **From**: Sender address, linked to Basescan. Displayed as a shortened string.
+    *   **To**: Receiver address or contract, linked to Basescan. Displayed as a shortened string.
+    *   **Value (ETH)**: The amount of ETH transferred in the transaction.
+    *   **Gas Fee**: The gas fee paid for the transaction, shown in ETH and its approximate USD equivalent (if ETH price is available).
+*   **Error/Warning Messages**: Any errors or warnings encountered during data fetching or processing are displayed.
+*   A link to return to the home page to track another wallet.
+
+Example output for gas fee aggregation (as seen on the results page):
 ```
 ==================================================
 Calculating Gas Spent Over Different Periods
@@ -251,16 +323,15 @@ Total Gas Spent (Last 30 Days): Y.YYYY ETH (Wei: YYYYYYYYYYYYYYY)
 Total Gas Spent (All Fetched Transactions): Z.ZZZZ ETH (Wei: ZZZZZZZZZZZZZZZ)
 
 ==================================================
-Calculating Gas Spent Over Different Periods
-==================================================
-Fetching current ETH to USD price from Basescan...
 Current ETH price: $2000.00 USD 
-Total Gas Spent (Last 7 Days): 0.0123 ETH (Wei: 12300000000000000) ($24.60 USD)
-Total Gas Spent (Last 30 Days): 0.0456 ETH (Wei: 45600000000000000) ($91.20 USD)
-Total Gas Spent (All Fetched Transactions): 0.1234 ETH (Wei: 123400000000000000) ($246.80 USD)
+Total Gas Spent (Last 7 Days): 0.0123 ETH ($24.60 USD)
+Total Gas Spent (Last 30 Days): 0.0456 ETH ($91.20 USD)
+Total Gas Spent (All Fetched Transactions): 0.1234 ETH ($246.80 USD)
+
+(Note: The "Wei" part is available in the backend data but not explicitly shown in this summary on the web page to keep it cleaner; the ETH and USD values are the primary display for summaries).
 
 ==================================================
-Generating Gas Spending Graph
+Generating Gas Spending Graph (Output shown in CLI if running tracker.py directly)
 ==================================================
 Prepared X days of data for the graph.
 Gas spending graph (PNG) generated: gas_spending_last_30_days.png
@@ -299,7 +370,58 @@ Ran 40 tests in 0.123s
 OK
 ```
 
-Details of the first few processed transactions:
+## 9. Deployment
+
+This application is configured for basic deployment on platforms like Render, Heroku, or similar services that support Python WSGI applications.
+
+### Key Deployment Files:
+
+*   **`requirements.txt`**: Lists all Python dependencies. The deployment platform will typically use this file to install the necessary packages (e.g., `pip install -r requirements.txt`). This now includes `gunicorn` which will act as the production WSGI server.
+*   **`Procfile`**: Specifies the command that the deployment platform should use to start the web server. For this application, it contains:
+    ```
+    web: gunicorn app:app
+    ```
+    This command tells the platform to start a web process by running `gunicorn`, serving the `app` instance found within the `app.py` file.
+
+### Environment Variables on Deployment Platform:
+
+To run successfully in a deployed environment, you **must** configure the following environment variables on your chosen platform (e.g., in Render's "Environment" settings):
+
+*   **`BASESCAN_API_KEY`**: Your API key for Basescan (for fetching Base transactions and ETH price).
+*   **`BASE_RPC_URL`**: The RPC URL for the Base blockchain (e.g., `https://mainnet.base.org` or your private RPC).
+*   **`ETHERSCAN_API_KEY`**: Your API key for Etherscan (required if you use any features that interact with the Ethereum mainnet, like fetching L1 gas fees).
+*   **`PYTHON_ENV` (Optional/Platform Specific)**: Some platforms might use `PYTHON_ENV=production` or similar to enable production optimizations in frameworks. Flask itself often uses `FLASK_ENV` (though `gunicorn` is often run without Flask's debug mode in prod regardless of this). For Render, typically you don't set `FLASK_ENV=production` directly if Gunicorn is handling production mode. The `debug=True` in `app.run()` is only for local development.
+
+The platform automatically installs dependencies from `requirements.txt` and uses the `Procfile` to start the application. Ensure these files are committed to your repository.
+
+## 10. Running the Web Frontend (Development)
+
+The application includes a Flask-based web frontend. For local development:
+
+**Prerequisites:**
+*   Ensure all dependencies are installed: `pip install -r requirements.txt`
+*   Make sure your `.env` file is configured with the necessary API keys (especially `BASESCAN_API_KEY` if you plan to integrate features that use it on the frontend).
+
+**To run the Flask development server:**
+
+1.  Navigate to the project root directory in your terminal.
+2.  Execute the following command:
+    ```bash
+    python app.py
+    ```
+3.  The server will typically start on `http://127.0.0.1:5000/`. Open this URL in your web browser.
+4.  You should see the main page of the gas tracker, rendered from `templates/index.html`.
+
+The development server will run in debug mode, meaning it will automatically reload if you make changes to `app.py` or other Python files it uses. For production, a proper WSGI server (like Gunicorn) should be used.
+
+### HTML Templates
+
+The frontend uses Flask's templating engine (Jinja2) to render dynamic HTML pages:
+
+*   **`templates/index.html`**: This is the main landing page. It contains a form where users can input a Base blockchain wallet address to track.
+*   **`templates/results.html`**: This page displays the gas fee report for the queried wallet address. It includes sections for the current L2 gas price, a summary of gas fees spent over different periods (with ETH and USD values), a graph visualizing daily gas spending, and a list of recent transactions. Placeholders (e.g., `{{ wallet_address }}`) are used for dynamic data that will be passed from the Flask application.
+
+Details of the first few processed transactions (CLI example):
 
 Transaction 1:
   Hash: 0xabcdef...

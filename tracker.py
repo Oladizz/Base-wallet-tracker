@@ -2,27 +2,28 @@ import os
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from pydantic import ValidationError
-from datetime import datetime, timedelta, date # Added date
-from collections import OrderedDict # For sorted dict
+from datetime import datetime, timedelta, date
+from collections import OrderedDict
+from decimal import Decimal
 
-from decimal import Decimal # New import
-
+# Assuming other modules are in the same directory or accessible via PYTHONPATH
 from etherscan_api import get_current_base_fee
 from base_rpc import get_current_base_l2_gas_price
-from basescan_api import get_account_normal_transactions, get_eth_current_price # Modified import
+from basescan_api import get_account_normal_transactions, get_eth_current_price
 from models import BaseTransaction
-from utils import wei_to_ether_str, wei_to_gwei_str, calculate_fiat_value # Modified import
+from utils import wei_to_ether_str, wei_to_gwei_str, calculate_fiat_value, wei_to_gwei_decimal
+# graph_generator might be imported later or within specific functions
+
+# Initial load_dotenv at module level for CLI or if functions are called directly
+load_dotenv()
 
 def fetch_and_display_gas_prices():
     """
     Fetches and displays:
     1. Ethereum current suggested base gas fee from Etherscan.
     2. Base L2 current gas price using a configured RPC URL.
+    (This function is more for CLI use now, as get_wallet_gas_report handles this for web)
     """
-    # This function is already loaded by load_dotenv() if called after/from main execution block
-    # load_dotenv() # Keep it here if this function could be called independently
-
-    # Fetch and display Ethereum base fee from Etherscan
     etherscan_api_key = os.getenv("ETHERSCAN_API_KEY")
     if not etherscan_api_key:
         print("Warning: ETHERSCAN_API_KEY not found. Skipping Ethereum gas fee.")
@@ -34,7 +35,6 @@ def fetch_and_display_gas_prices():
         else:
             print("Failed to retrieve the Ethereum current base gas fee.")
 
-    # Fetch and display Base L2 gas price
     base_rpc_url = os.getenv("BASE_RPC_URL")
     if not base_rpc_url:
         print("\nWarning: BASE_RPC_URL not found. Skipping Base L2 gas price.")
@@ -46,75 +46,54 @@ def fetch_and_display_gas_prices():
         else:
             print("Failed to retrieve the Base L2 gas price.")
 
-def fetch_and_process_transactions(wallet_address: str) -> List[BaseTransaction]:
+
+def fetch_and_process_transactions(wallet_address: str) -> tuple[List[BaseTransaction], Optional[str]]:
     """
     Fetches normal transactions for a wallet from Basescan, processes them into
-    BaseTransaction models, and prints some information.
+    BaseTransaction models.
+    Returns a list of BaseTransaction objects and an optional error message string.
     """
-    # load_dotenv() will be called in main, ensuring env vars are loaded
     basescan_api_key = os.getenv("BASESCAN_API_KEY")
-
     if not basescan_api_key:
-        print("Error: BASESCAN_API_KEY not found in environment variables.")
-        print("Please set it in your .env file to fetch Base transactions.")
-        return []
+        # This case should ideally be caught before calling this function by get_wallet_gas_report
+        return [], "BASESCAN_API_KEY not found in environment variables."
 
-    if not wallet_address:
-        print("Error: No wallet address provided for transaction fetching.")
-        return []
-
-    print(f"\nFetching normal transactions for wallet: {wallet_address} from Basescan...")
-    raw_transactions = get_account_normal_transactions(
+    # print(f"\nFetching normal transactions for wallet: {wallet_address} from Basescan...") # Reduce console noise for web
+    raw_tx_data_list, api_error_msg = get_account_normal_transactions(
         api_key=basescan_api_key,
         wallet_address=wallet_address,
-        offset=10 # Fetching fewer transactions for demo purposes
+        offset=100 # Fetch more for better summary
     )
 
     processed_transactions: List[BaseTransaction] = []
-    if not raw_transactions:
-        print("No transactions found or API error occurred.")
-        return processed_transactions
+    if api_error_msg:
+        # print(f"API Error from get_account_normal_transactions: {api_error_msg}") # Reduce noise
+        return [], api_error_msg 
 
-    print(f"Retrieved {len(raw_transactions)} raw transactions. Processing...")
+    if not raw_tx_data_list:
+        # print("No transactions found for this address (according to API).") # Reduce noise
+        return [], None # No data, but no direct API error to report upwards
 
-    for i, tx_data in enumerate(raw_transactions):
+    # print(f"Retrieved {len(raw_tx_data_list)} raw transactions. Processing...") # Reduce noise
+    for tx_data in raw_tx_data_list:
         try:
             transaction = BaseTransaction(**tx_data)
             processed_transactions.append(transaction)
         except ValidationError as e:
             print(f"Warning: Could not validate transaction data for tx hash {tx_data.get('hash', 'N/A')}: {e.errors()}")
-            # Optionally, print problematic data: print(f"Problematic data: {tx_data}")
         except Exception as e:
             print(f"Warning: An unexpected error occurred processing tx hash {tx_data.get('hash', 'N/A')}: {e}")
-
-    print(f"\nSuccessfully processed {len(processed_transactions)} transactions.")
-
-    if processed_transactions:
-        print("\nDetails of the first few processed transactions:")
-        for i, tx_model in enumerate(processed_transactions[:3]): # Display first 3
-            print(f"\nTransaction {i+1}:")
-            print(f"  Hash: {tx_model.hash}")
-            print(f"  Timestamp: {tx_model.timestamp_dt} (Original: {tx_model.timeStamp})")
-            print(f"  From: {tx_model.from_address}")
-            print(f"  To: {tx_model.to_address}")
-            print(f"  Value (Wei): {wei_to_ether_str(tx_model.value)} (Original Wei: {tx_model.value})")
-            print(f"  Gas Used: {tx_model.gasUsed}, Gas Price: {wei_to_gwei_str(tx_model.gasPrice)} (Original Wei: {tx_model.gasPrice})")
-            if tx_model.gasFeeInWei:
-                print(f"  Calculated Gas Fee: {wei_to_ether_str(tx_model.gasFeeInWei)} (Original Wei: {tx_model.gasFeeInWei})")
-            else:
-                print(f"  Calculated Gas Fee (Wei): None")
-            print(f"  Is Error: {tx_model.isError}, TxReceipt Status: {tx_model.txreceipt_status}")
     
-    return processed_transactions
+    # CLI display removed from here, will be handled by CLI specific part in __main__ if needed
+            
+    return processed_transactions, None
+
 
 def filter_transactions_by_timeframe(
     transactions: List[BaseTransaction], 
     timeframe_start: datetime, 
     timeframe_end: datetime
 ) -> List[BaseTransaction]:
-    """
-    Filters transactions whose timestamp_dt falls within the [timeframe_start, timeframe_end] range (inclusive).
-    """
     filtered_txs = []
     for tx in transactions:
         if tx.timestamp_dt and timeframe_start <= tx.timestamp_dt <= timeframe_end:
@@ -122,19 +101,13 @@ def filter_transactions_by_timeframe(
     return filtered_txs
 
 def aggregate_gas_fees(transactions: List[BaseTransaction]) -> int:
-    """
-    Sums up the gasFeeInWei for all transactions in the provided list.
-    Handles potential None or invalid values for gasFeeInWei by treating them as 0.
-    Returns the total gas fee in Wei as an integer.
-    """
     total_gas_fee_wei = 0
     for tx in transactions:
         if tx.gasFeeInWei:
             try:
                 total_gas_fee_wei += int(tx.gasFeeInWei)
             except (ValueError, TypeError):
-                # print(f"Warning: Could not parse gasFeeInWei '{tx.gasFeeInWei}' for tx {tx.hash}. Skipping.")
-                pass # Treat as 0 if not a valid integer string
+                pass 
     return total_gas_fee_wei
 
 def get_gas_spent_for_period(
@@ -143,198 +116,200 @@ def get_gas_spent_for_period(
     custom_start_date: Optional[datetime] = None, 
     custom_end_date: Optional[datetime] = None
 ) -> int:
-    """
-    Calculates total gas spent in Wei for a given period.
-    """
     if not transactions:
         return 0
-
     target_transactions = transactions
-
     if period_days is not None:
         now = datetime.now()
         timeframe_end = now
         timeframe_start = now - timedelta(days=period_days)
-        print(f"Filtering for period: {timeframe_start.strftime('%Y-%m-%d')} to {timeframe_end.strftime('%Y-%m-%d')}")
+        # print(f"Filtering for period: {timeframe_start.strftime('%Y-%m-%d')} to {timeframe_end.strftime('%Y-%m-%d')}") # Reduce noise
         target_transactions = filter_transactions_by_timeframe(transactions, timeframe_start, timeframe_end)
     elif custom_start_date and custom_end_date:
-        print(f"Filtering for custom period: {custom_start_date.strftime('%Y-%m-%d')} to {custom_end_date.strftime('%Y-%m-%d')}")
+        # print(f"Filtering for custom period: {custom_start_date.strftime('%Y-%m-%d')} to {custom_end_date.strftime('%Y-%m-%d')}") # Reduce noise
         target_transactions = filter_transactions_by_timeframe(transactions, custom_start_date, custom_end_date)
-    # If no period or custom dates, process all transactions (target_transactions remains as all transactions)
     
-    if not target_transactions: # After filtering, if no transactions match
-        print("No transactions found in the specified period.")
+    if not target_transactions:
+        # print("No transactions found in the specified period for gas calculation.") # Reduce noise
         return 0
-        
-    total_gas_spent_wei = aggregate_gas_fees(target_transactions)
-    return total_gas_spent_wei
+    return aggregate_gas_fees(target_transactions)
 
 def prepare_daily_gas_data(transactions: List[BaseTransaction], days_limit: int = 30) -> Dict[date, int]:
-    """
-    Aggregates total gasFeeInWei for each day for transactions within the last 'days_limit'.
-
-    Args:
-        transactions: A list of BaseTransaction objects.
-        days_limit: The number of past days to consider transactions from (e.g., 30 for last 30 days).
-
-    Returns:
-        A dictionary where keys are date objects and values are total gas fees in Wei for that day,
-        sorted by date.
-    """
     daily_gas: Dict[date, int] = {}
     if not transactions:
         return daily_gas
-
-    # Determine the date limit
     today = datetime.now().date()
-    start_date_limit = today - timedelta(days=days_limit -1) # -1 to include today in the 30 days period
-
-    print(f"Preparing daily gas data from {start_date_limit} to {today} ({days_limit} days period)")
-
+    start_date_limit = today - timedelta(days=days_limit - 1)
+    # print(f"Preparing daily gas data from {start_date_limit} to {today} ({days_limit} days period)") # Reduce noise
     for tx in transactions:
         if tx.timestamp_dt and tx.gasFeeInWei:
             tx_date = tx.timestamp_dt.date()
-            if tx_date >= start_date_limit and tx_date <= today : # Ensure tx is within the desired window
+            if start_date_limit <= tx_date <= today:
                 try:
                     gas_fee_wei = int(tx.gasFeeInWei)
                     daily_gas[tx_date] = daily_gas.get(tx_date, 0) + gas_fee_wei
                 except (ValueError, TypeError):
-                    # print(f"Warning: Could not parse gasFeeInWei '{tx.gasFeeInWei}' for tx {tx.hash} in daily aggregation. Skipping.")
                     pass
-    
-    # Sort the dictionary by date
-    # Using OrderedDict to maintain insertion order after sorting if needed, 
-    # but dicts maintain insertion order in Python 3.7+ anyway.
-    # For clarity or older Pythons, OrderedDict is explicit.
-    if not daily_gas: # If no transactions fell into the date range
+    if not daily_gas:
         return {}
+    return dict(OrderedDict(sorted(daily_gas.items())))
 
-    sorted_daily_gas = OrderedDict(sorted(daily_gas.items()))
-    
-    return dict(sorted_daily_gas) # Return as standard dict
+# --- Main Orchestration Function ---
+def get_wallet_gas_report(wallet_address: str) -> Dict:
+    report_data = {
+        "wallet_address": wallet_address,
+        "current_l2_gas_price_gwei": "N/A",
+        "current_eth_usd_price": "N/A",
+        "gas_summary": {
+            "all_time": {"eth": "0.00 ETH", "usd": "$0.00 USD", "wei": 0},
+            "last_30_days": {"eth": "0.00 ETH", "usd": "$0.00 USD", "wei": 0},
+            "last_7_days": {"eth": "0.00 ETH", "usd": "$0.00 USD", "wei": 0},
+        },
+        "transactions": [], # This will be list of dicts for template
+        "graph_url": None,
+        "error_messages": []
+    }
+    # load_dotenv() already called at module level
 
-
-if __name__ == "__main__":
-    load_dotenv()
-
-    fetch_and_display_gas_prices()
-
-    print("\n" + "="*50)
-    print("Starting Transaction Fetching & Processing")
-    print("="*50)
-    
-    test_wallet = os.getenv("TEST_WALLET_ADDRESS")
-    all_fetched_transactions: List[BaseTransaction] = []
-
-    if not test_wallet:
-        print("\nWarning: TEST_WALLET_ADDRESS not found in .env. Set it to test transaction fetching.")
-        test_wallet = "0x0000000000000000000000000000000000000000" # Use placeholder
-        print(f"Using placeholder address for transaction fetching: {test_wallet}")
-
-    if test_wallet and test_wallet != "0x0000000000000000000000000000000000000000":
-        all_fetched_transactions = fetch_and_process_transactions(test_wallet)
-        if all_fetched_transactions:
-            print(f"\nTotal of {len(all_fetched_transactions)} transactions processed for wallet {test_wallet}.")
+    # 1. Fetch current L2 gas price
+    base_rpc_url = os.getenv("BASE_RPC_URL")
+    if base_rpc_url:
+        l2_gas_price_gwei_decimal = get_current_base_l2_gas_price(base_rpc_url)
+        if l2_gas_price_gwei_decimal is not None:
+            report_data["current_l2_gas_price_gwei"] = f"{l2_gas_price_gwei_decimal:.2f} Gwei"
         else:
-            # This message will print if API fails or if wallet truly has no transactions
-            print(f"\nNo transactions were processed or returned for wallet {test_wallet} (this could be due to API errors, no transactions, or filters).")
-    else: # This case handles if test_wallet was initially empty and then set to placeholder
-        print("\nSkipping actual transaction fetching as TEST_WALLET_ADDRESS was not meaningfully set.")
-
-    # --- Gas Aggregation (always attempt to run, even if all_fetched_transactions is empty) ---
-    print("\n" + "="*50)
-    print("Calculating Gas Spent Over Different Periods")
-    print("="*50)
-
-    # Fetch current ETH price once
-    basescan_api_key_env = os.getenv("BASESCAN_API_KEY") # Re-fetch for clarity, or pass from above
-    eth_usd_price: Optional[Decimal] = None
-    if basescan_api_key_env: # Ensure API key exists before trying to fetch price
-        print("Fetching current ETH to USD price from Basescan...")
-        eth_usd_price = get_eth_current_price(basescan_api_key_env)
-        if eth_usd_price:
-            print(f"Current ETH price: ${eth_usd_price:.2f} USD")
-        else:
-            print("Could not retrieve current ETH price. USD values will not be calculated.")
+            report_data["error_messages"].append("Failed to retrieve Base L2 gas price.")
+            report_data["current_l2_gas_price_gwei"] = "Error fetching L2 price" # Shorter for UI
     else:
-        print("BASESCAN_API_KEY not found in .env. Skipping ETH price fetch and USD calculations for gas totals.")
+        report_data["error_messages"].append("BASE_RPC_URL not found in .env.")
+        report_data["current_l2_gas_price_gwei"] = "RPC URL not configured"
 
+    # 2. Fetch current ETH to USD price
+    basescan_api_key = os.getenv("BASESCAN_API_KEY")
+    eth_usd_price_decimal: Optional[Decimal] = None
+    if basescan_api_key:
+        eth_usd_price_decimal = get_eth_current_price(basescan_api_key)
+        if eth_usd_price_decimal:
+            report_data["current_eth_usd_price"] = f"${eth_usd_price_decimal:.2f} USD"
+        else:
+            report_data["error_messages"].append("Failed to retrieve current ETH to USD price.")
+            report_data["current_eth_usd_price"] = "Error fetching ETH price" # Shorter for UI
+    else:
+        report_data["error_messages"].append("BASESCAN_API_KEY not found. ETH price and transactions cannot be fetched.")
+        report_data["current_eth_usd_price"] = "API Key missing"
 
-    if not all_fetched_transactions:
-        print("No transactions available for gas calculation (either fetching failed, TEST_WALLET_ADDRESS was not set, or it has no transactions). Reporting 0 ETH spent.")
+    # 3. Fetch and process transactions
+    raw_transactions_from_api: List[BaseTransaction] = []
+    if basescan_api_key: 
+        fetched_tx_list, tx_api_error_msg = fetch_and_process_transactions(wallet_address)
+        if tx_api_error_msg:
+            report_data["error_messages"].append(f"Could not fetch transactions: {tx_api_error_msg}")
+        raw_transactions_from_api = fetched_tx_list
+        if not raw_transactions_from_api and not tx_api_error_msg:
+            report_data["error_messages"].append(f"No transactions found for wallet {wallet_address}.")
+    # else: BASESCAN_API_KEY missing message already added to error_messages
 
-    # Helper function to format output string with optional USD value
-    def format_gas_output(label: str, wei_amount: int, eth_price: Optional[Decimal]) -> str:
-        # Ensure wei_amount is an int for calculate_fiat_value.
-        # get_gas_spent_for_period already returns int.
-        # wei_to_ether_str was updated to accept int.
-        eth_str = wei_to_ether_str(wei_amount) 
-        output = f"Total Gas Spent ({label}): {eth_str} (Wei: {wei_amount})"
-        if eth_price: # Check if eth_usd_price was successfully fetched
-            usd_value = calculate_fiat_value(wei_amount, eth_price)
-            if usd_value is not None:
-                output += f" (${usd_value:.2f} USD)"
-            else:
-                # This case might happen if wei_amount is huge and causes overflow with price, though unlikely with Decimal
-                output += " ($--.-- USD - calculation error)"
-        # If eth_price is None, USD part is implicitly skipped by the if eth_price: condition.
-        # Adding an explicit message if price wasn't available for clarity.
-        elif not basescan_api_key_env or not eth_usd_price: # Check original reason for no price
-             output += " (USD conversion not available - ETH price not fetched)"
-        return output
+    template_transactions = []
+    for tx in raw_transactions_from_api[:20]: 
+        gas_fee_usd_str = "$--.-- USD"
+        if tx.gasFeeInWei and eth_usd_price_decimal:
+            try:
+                gas_fee_wei_int = int(tx.gasFeeInWei)
+                fiat_val = calculate_fiat_value(gas_fee_wei_int, eth_usd_price_decimal)
+                if fiat_val is not None: gas_fee_usd_str = f"${fiat_val:.2f} USD"
+            except (ValueError, TypeError): gas_fee_usd_str = "$Error USD"
+        template_transactions.append({
+            "hash": tx.hash,
+            "timestamp_dt_str": tx.timestamp_dt.strftime('%Y-%m-%d %H:%M:%S') if tx.timestamp_dt else tx.timeStamp,
+            "from_address": tx.from_address, "to_address": tx.to_address,
+            "value_eth_str": tx.value_eth_str, "gas_fee_eth_str": tx.gas_fee_eth_str,
+            "gas_fee_usd_str": gas_fee_usd_str
+        })
+    report_data["transactions"] = template_transactions
 
-    # Last 7 days
-    gas_7_days_wei = get_gas_spent_for_period(all_fetched_transactions, period_days=7)
-    print(format_gas_output("Last 7 Days", gas_7_days_wei, eth_usd_price))
+    # 4. Calculate gas summaries
+    periods = {
+        "all_time": get_gas_spent_for_period(raw_transactions_from_api),
+        "last_30_days": get_gas_spent_for_period(raw_transactions_from_api, period_days=30),
+        "last_7_days": get_gas_spent_for_period(raw_transactions_from_api, period_days=7),
+    }
+    for period_name, wei_amount in periods.items():
+        eth_str = wei_to_ether_str(wei_amount)
+        usd_str = "$--.-- USD"
+        if eth_usd_price_decimal:
+            fiat_val = calculate_fiat_value(wei_amount, eth_usd_price_decimal)
+            if fiat_val is not None: usd_str = f"${fiat_val:.2f} USD"
+        report_data["gas_summary"][period_name] = {"eth": eth_str, "usd": usd_str, "wei": wei_amount}
     
-    # Last 30 days
-    gas_30_days_wei = get_gas_spent_for_period(all_fetched_transactions, period_days=30)
-    print(format_gas_output("Last 30 Days", gas_30_days_wei, eth_usd_price))
-
-    # All time (based on fetched transactions)
-    gas_all_time_wei = get_gas_spent_for_period(all_fetched_transactions) # No period specified
-    print(format_gas_output("All Fetched Transactions", gas_all_time_wei, eth_usd_price))
-    
-    # Example for a custom period - kept commented out as it requires specific data
-    # ... (custom period example code remains unchanged) ...
-
-    # --- Graph Generation (New) ---
-    print("\n" + "="*50)
-    print("Generating Gas Spending Graph")
-    print("="*50)
-
-    # Prepare data for the graph (e.g., last 30 days)
-    # This uses all_fetched_transactions which might be empty if API calls failed
-    # The prepare_daily_gas_data and generate_gas_spending_graph functions should handle empty data.
-    daily_data_for_graph = prepare_daily_gas_data(all_fetched_transactions, days_limit=30)
-    
-    if daily_data_for_graph:
-        print(f"Prepared {len(daily_data_for_graph)} days of data for the graph.")
-        # Dynamically import here or at the top if preferred
-        try:
-            from graph_generator import generate_gas_spending_graph
-            
-            # Generate PNG graph
-            png_graph_filename = "gas_spending_last_30_days.png"
-            png_generated = generate_gas_spending_graph(daily_data_for_graph, png_graph_filename)
-            if png_generated:
-                print(f"Gas spending graph (PNG) generated: {png_graph_filename}")
-            else:
-                print("PNG graph generation failed or was skipped due to no data.")
-
-            # Generate PDF graph if PNG was successful
-            if png_generated: # Only attempt PDF if data was good enough for PNG
-                pdf_graph_filename = "gas_spending_last_30_days.pdf"
-                if generate_gas_spending_graph(daily_data_for_graph, pdf_graph_filename):
-                    print(f"Gas spending graph (PDF) generated: {pdf_graph_filename}")
+    # 5. Prepare data for and generate graph
+    if raw_transactions_from_api:
+        daily_data_for_graph = prepare_daily_gas_data(raw_transactions_from_api, days_limit=30)
+        if daily_data_for_graph:
+            static_images_dir = os.path.join('static', 'images')
+            os.makedirs(static_images_dir, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            short_wallet = wallet_address[:6] + "_" + wallet_address[-4:]
+            png_filename_base = f"gas_graph_{short_wallet}_{timestamp}.png"
+            png_filepath = os.path.join(static_images_dir, png_filename_base)
+            try:
+                from graph_generator import generate_gas_spending_graph
+                if generate_gas_spending_graph(daily_data_for_graph, png_filepath):
+                    report_data["graph_url"] = f"/static/images/{png_filename_base}"
                 else:
-                    # This might happen if, for some reason, PDF saving fails while PNG worked,
-                    # or if the function itself has an issue specifically with PDF.
-                    print(f"PDF graph generation failed for {pdf_graph_filename}.")
+                    report_data["error_messages"].append("Graph generation failed (PNG).")
+            except ImportError:
+                report_data["error_messages"].append("Graph generator module not found.")
+            except Exception as e:
+                report_data["error_messages"].append(f"An error occurred during graph generation: {e}")
+        elif raw_transactions_from_api: 
+             report_data["error_messages"].append("No recent transactions in the last 30 days to generate a graph.")
             
-        except ImportError:
-            print("Could not import graph_generator. Skipping graph generation. Ensure graph_generator.py exists.")
-        except Exception as e:
-            print(f"An error occurred during graph generation: {e}")
+    return report_data
+
+# --- Main Execution (for CLI usage) ---
+if __name__ == "__main__":
+    print("\n" + "="*50)
+    print("Gas Tracker CLI Mode")
+    print("="*50)
+
+    fetch_and_display_gas_prices() 
+
+    test_wallet_cli = os.getenv("TEST_WALLET_ADDRESS")
+    if not test_wallet_cli:
+        print("\nWarning: TEST_WALLET_ADDRESS not found in .env for CLI mode.")
+        test_wallet_cli = input("Enter wallet address to track (or press Enter to skip): ").strip()
+
+    if test_wallet_cli:
+        print(f"\nFetching full report for wallet: {test_wallet_cli}...")
+        report = get_wallet_gas_report(test_wallet_cli)
+
+        print("\n--- CLI Wallet Report ---")
+        print(f"Wallet Address: {report['wallet_address']}")
+        print(f"Current Base L2 Gas Price: {report['current_l2_gas_price_gwei']}")
+        print(f"Current ETH Price: {report['current_eth_usd_price']}")
+        
+        print("\nGas Spending Summary:")
+        for period, data in report['gas_summary'].items():
+            print(f"  {period.replace('_', ' ').title()}: {data['eth']} ({data['usd']})")
+
+        if report['graph_url']:
+            print(f"\nGas Spending Graph (Last 30 Days): {report['graph_url']} (Run app.py to view via web)")
+        
+        if report['transactions']: 
+            print(f"\nDisplaying up to {len(report['transactions'])} recent transactions (details pre-formatted for web):")
+            for i, tx_dict in enumerate(report['transactions']):
+                print(f"\n  Transaction {i+1}:")
+                print(f"    Hash: {tx_dict['hash']}")
+                print(f"    Timestamp: {tx_dict['timestamp_dt_str']}")
+                print(f"    From: {tx_dict['from_address']}")
+                print(f"    To: {tx_dict['to_address']}")
+                print(f"    Value: {tx_dict['value_eth_str']}")
+                print(f"    Gas Fee: {tx_dict['gas_fee_eth_str']} ({tx_dict['gas_fee_usd_str']})")
+        
+        if report['error_messages']:
+            print("\nErrors/Warnings during report generation:")
+            for msg in report['error_messages']:
+                print(f"- {msg}")
+        print("\n--- End of CLI Report ---")
     else:
-        print("No daily gas data available to generate a graph (transactions might be outside the 30-day window or fetching failed).")
+        print("\nNo wallet address provided for CLI report. Skipping.")
