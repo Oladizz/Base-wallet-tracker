@@ -1,7 +1,7 @@
-requests
-python-dotenv
-web3
-pydantic
-matplotlib
 Flask
 gunicorn
+python-dotenv
+requests
+pydantic
+matplotlib
+web3
