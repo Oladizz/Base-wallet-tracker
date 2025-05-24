@@ -1,28 +1,30 @@
 from flask import Flask, render_template, request, redirect, url_for
 import os
+import requests # Added
+import json # Added
 
 # Attempt to import the main report generation function from tracker.py
-try:
-    from tracker import get_wallet_gas_report
-except ImportError:
-    # This might happen if tracker.py is not yet created or has issues
-    # For now, define a placeholder if tracker is not available
-    print("Warning: Could not import get_wallet_gas_report from tracker.py. Using placeholder.")
-    def get_wallet_gas_report(wallet_address: str):
-        # Placeholder data structure matching what results.html might expect
-        return {
-            "wallet_address": wallet_address,
-            "current_l2_gas_price_gwei": "N/A (tracker not loaded)",
-            "current_eth_usd_price": "N/A (tracker not loaded)",
-            "gas_summary": {
-                "all_time": {"eth": "0 ETH", "usd": "$0 USD", "wei": 0},
-                "last_30_days": {"eth": "0 ETH", "usd": "$0 USD", "wei": 0},
-                "last_7_days": {"eth": "0 ETH", "usd": "$0 USD", "wei": 0},
-            },
-            "transactions": [],
-            "graph_url": None,
-            "error_messages": ["Tracker module could not be loaded. Displaying placeholder data."]
-        }
+# try:
+#     from tracker import get_wallet_gas_report
+# except ImportError:
+#     # This might happen if tracker.py is not yet created or has issues
+#     # For now, define a placeholder if tracker is not available
+#     print("Warning: Could not import get_wallet_gas_report from tracker.py. Using placeholder.")
+#     def get_wallet_gas_report(wallet_address: str):
+#         # Placeholder data structure matching what results.html might expect
+#         return {
+#             "wallet_address": wallet_address,
+#             "current_l2_gas_price_gwei": "N/A (tracker not loaded)",
+#             "current_eth_usd_price": "N/A (tracker not loaded)",
+#             "gas_summary": {
+#                 "all_time": {"eth": "0 ETH", "usd": "$0 USD", "wei": 0},
+#                 "last_30_days": {"eth": "0 ETH", "usd": "$0 USD", "wei": 0},
+#                 "last_7_days": {"eth": "0 ETH", "usd": "$0 USD", "wei": 0},
+#             },
+#             "transactions": [],
+#             "graph_url": None, # This will be graph_data_base64 now
+#             "error_messages": ["Tracker module could not be loaded. Displaying placeholder data."]
+#         }
 
 # Create a Flask application instance
 # Flask will automatically look for 'static' and 'templates' folders
@@ -67,9 +69,45 @@ def track_wallet_route():
 
     print(f"Received wallet address: {wallet_address_input}") # For debugging
     
-    # Call the main logic function from tracker.py
-    # This function is expected to return a dictionary with all necessary data
-    report_data = get_wallet_gas_report(wallet_address_input)
+    # Call the Firebase Cloud Function
+    cloud_function_url = "YOUR_CLOUD_FUNCTION_URL_HERE/wallet_gas_report" # Replace with actual URL
+    payload = {'wallet_address': wallet_address_input}
+    headers = {'Content-Type': 'application/json'}
+
+    try:
+        response = requests.post(cloud_function_url, json=payload, timeout=30)
+        response.raise_for_status() # Raise an exception for bad status codes (4xx or 5xx)
+        report_data = response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling Cloud Function: {e}")
+        report_data = {
+            "wallet_address": wallet_address_input,
+            "current_l2_gas_price_gwei": "N/A",
+            "current_eth_usd_price": "N/A",
+            "gas_summary": {
+                "all_time": {"eth": "0 ETH", "usd": "$0 USD"},
+                "last_30_days": {"eth": "0 ETH", "usd": "$0 USD"},
+                "last_7_days": {"eth": "0 ETH", "usd": "$0 USD"},
+            },
+            "transactions": [],
+            "graph_data_base64": None, 
+            "error_messages": [f"Error fetching report from backend: {str(e)}"]
+        }
+    except json.JSONDecodeError:
+        print("Invalid JSON response from Cloud Function.")
+        report_data = {
+            "wallet_address": wallet_address_input,
+            "current_l2_gas_price_gwei": "N/A",
+            "current_eth_usd_price": "N/A",
+            "gas_summary": {
+                "all_time": {"eth": "0 ETH", "usd": "$0 USD"},
+                "last_30_days": {"eth": "0 ETH", "usd": "$0 USD"},
+                "last_7_days": {"eth": "0 ETH", "usd": "$0 USD"},
+            },
+            "transactions": [],
+            "graph_data_base64": None,
+            "error_messages": ["Invalid response from backend (not JSON)."]
+        }
     
     # The report_data dictionary itself is passed as keyword arguments to render_template.
     # Utility functions like wei_to_ether_str are now applied in tracker.py before this point,

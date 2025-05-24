@@ -61,12 +61,12 @@
 
         <div class="section" id="gas-graph">
             <h2>Gas Spending Graph (Last 30 Days)</h2>
-            {% if graph_url %}
+            {% if graph_data_base64 %}
                 <div class="graph-container">
-                    <img src="{{ graph_url }}" alt="Gas Spending Graph for last 30 days">
+                    <img src="{{ graph_data_base64 }}" alt="Gas Spending Graph for last 30 days">
                 </div>
             {% else %}
-                <p class="text-center">Gas spending graph is not available. (May require transactions within the last 30 days)</p>
+                <p class="text-center">Gas spending graph is not available. (This may be due to no recent transactions or an error during graph generation)</p>
             {% endif %}
         </div>
 

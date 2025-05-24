@@ -1,0 +1,8 @@
+firebase-functions
+functions-framework
+requests
+python-dotenv
+pydantic
+matplotlib
+web3
+Flask
