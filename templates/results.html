@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <div id="particles-js"></div>
+    <div id="loader-overlay">
+        <div class="spinner"></div>
+    </div>
     <div class="container">
         <h1>Gas Fee Report for <code>{{ wallet_address }}</code></h1>
 
@@ -21,7 +25,12 @@
 
         <div class="section" id="queried-address">
             <h2>Queried Wallet Address</h2>
-            <p><strong>Address:</strong> <code>{{ wallet_address }}</code></p>
+            <p><strong>Address:</strong> <code title="{{ wallet_address }}">{{ wallet_address[:4] }}...{{ wallet_address[-2:] if wallet_address and wallet_address|length > 6 else wallet_address }}</code></p>
+        </div>
+
+        <div class="section" id="wallet-balance">
+            <h2>Wallet ETH Balance</h2>
+            <p>{{ wallet_eth_balance }}</p>
         </div>
 
         <div class="section" id="current-gas-price">
@@ -61,12 +70,12 @@
 
         <div class="section" id="gas-graph">
             <h2>Gas Spending Graph (Last 30 Days)</h2>
-            {% if graph_url %}
+            {% if graph_data_base64 %}
                 <div class="graph-container">
-                    <img src="{{ graph_url }}" alt="Gas Spending Graph for last 30 days">
+                    <img src="{{ graph_data_base64 }}" alt="Gas Spending Graph for last 30 days">
                 </div>
             {% else %}
-                <p class="text-center">Gas spending graph is not available. (May require transactions within the last 30 days)</p>
+                <p class="text-center">Gas spending graph is not available. (This may be due to no recent transactions or an error during graph generation)</p>
             {% endif %}
         </div>
 
@@ -87,10 +96,10 @@
                     <tbody>
                         {% for tx_dict in transactions %} {# Changed loop var name for clarity #}
                         <tr>
-                            <td><a href="https://basescan.org/tx/{{ tx_dict.hash }}" target="_blank" title="{{ tx_dict.hash }}">{{ tx_dict.hash[:10] }}...{{ tx_dict.hash[-8:] }}</a></td>
+                            <td><a href="https://basescan.org/tx/{{ tx_dict.hash }}" target="_blank" title="{{ tx_dict.hash }}">{{ tx_dict.hash[:4] }}...{{ tx_dict.hash[-2:] if tx_dict.hash and tx_dict.hash|length > 6 else tx_dict.hash }}</a></td>
                             <td>{{ tx_dict.timestamp_dt_str }}</td>
-                            <td><a href="https://basescan.org/address/{{ tx_dict.from_address }}" target="_blank" title="{{ tx_dict.from_address }}">{{ tx_dict.from_address[:10] }}...{{ tx_dict.from_address[-8:] }}</a></td>
-                            <td><a href="https://basescan.org/address/{{ tx_dict.to_address }}" target="_blank" title="{{ tx_dict.to_address }}">{{ tx_dict.to_address[:10] }}...{{ tx_dict.to_address[-8:] }}</a></td>
+                            <td><a href="https://basescan.org/address/{{ tx_dict.from_address }}" target="_blank" title="{{ tx_dict.from_address }}">{{ tx_dict.from_address[:4] }}...{{ tx_dict.from_address[-2:] if tx_dict.from_address and tx_dict.from_address|length > 6 else tx_dict.from_address }}</a></td>
+                            <td><a href="https://basescan.org/address/{{ tx_dict.to_address }}" target="_blank" title="{{ tx_dict.to_address }}">{{ tx_dict.to_address[:4] }}...{{ tx_dict.to_address[-2:] if tx_dict.to_address and tx_dict.to_address|length > 6 else tx_dict.to_address }}</a></td>
                             <td>{{ tx_dict.value_eth_str }}</td>
                             <td>{{ tx_dict.gas_fee_eth_str }} 
                                 {% if tx_dict.gas_fee_usd_str != "$--.-- USD" and tx_dict.gas_fee_usd_str != "$0.00 USD" and tx_dict.gas_fee_usd_str != "$Error USD" %}
@@ -111,5 +120,134 @@
         <a href="/" class="back-link">Track another wallet</a>
         </div>
     </div>
+    <!-- particles.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <!-- particles.js initialization -->
+    <script>
+        if (typeof particlesJS !== 'undefined') {
+            particlesJS('particles-js', {
+                "particles": {
+                    "number": {
+                        "value": 80,
+                        "density": {
+                            "enable": true,
+                            "value_area": 800
+                        }
+                    },
+                    "color": {
+                        "value": "#00E5FF" // Neon blue, same as CSS var --neon-blue
+                    },
+                    "shape": {
+                        "type": "circle",
+                        "stroke": {
+                            "width": 0,
+                            "color": "#000000"
+                        },
+                        "polygon": {
+                            "nb_sides": 5
+                        }
+                    },
+                    "opacity": {
+                        "value": 0.5,
+                        "random": false,
+                        "anim": {
+                            "enable": false,
+                            "speed": 1,
+                            "opacity_min": 0.1,
+                            "sync": false
+                        }
+                    },
+                    "size": {
+                        "value": 3,
+                        "random": true,
+                        "anim": {
+                            "enable": false,
+                            "speed": 40,
+                            "size_min": 0.1,
+                            "sync": false
+                        }
+                    },
+                    "line_linked": {
+                        "enable": true,
+                        "distance": 150,
+                        "color": "#00E5FF", // Neon blue
+                        "opacity": 0.4,
+                        "width": 1
+                    },
+                    "move": {
+                        "enable": true,
+                        "speed": 2, // Slower speed
+                        "direction": "none",
+                        "random": false,
+                        "straight": false,
+                        "out_mode": "out",
+                        "bounce": false,
+                        "attract": {
+                            "enable": false,
+                            "rotateX": 600,
+                            "rotateY": 1200
+                        }
+                    }
+                },
+                "interactivity": {
+                    "detect_on": "canvas",
+                    "events": {
+                        "onhover": {
+                            "enable": true,
+                            "mode": "grab" // Changed from repulse to grab
+                        },
+                        "onclick": {
+                            "enable": true,
+                            "mode": "push"
+                        },
+                        "resize": true
+                    },
+                    "modes": {
+                        "grab": {
+                            "distance": 140,
+                            "line_linked": {
+                                "opacity": 1
+                            }
+                        },
+                        "bubble": {
+                            "distance": 400,
+                            "size": 40,
+                            "duration": 2,
+                            "opacity": 8,
+                            "speed": 3
+                        },
+                        "repulse": {
+                            "distance": 150,
+                            "duration": 0.4
+                        },
+                        "push": {
+                            "particles_nb": 4
+                        },
+                        "remove": {
+                            "particles_nb": 2
+                        }
+                    }
+                },
+                "retina_detect": true
+            });
+        } else {
+            console.error("particles.js library not loaded.");
+        }
+    </script>
+    <script>
+        window.addEventListener('load', function() {
+            const loader = document.getElementById('loader-overlay');
+            if (loader) {
+                // Option 1: Fade out then hide
+                loader.style.opacity = '0';
+                setTimeout(function() {
+                    loader.classList.add('hidden');
+                }, 500); // Match timeout to CSS transition duration
+
+                // Option 2: Hide immediately
+                // loader.classList.add('hidden');
+            }
+        });
+    </script>
 </body>
 </html>

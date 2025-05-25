@@ -1,35 +1,27 @@
 from flask import Flask, render_template, request, redirect, url_for
 import os
+# import requests # Removed
+# import json # Removed
+from dotenv import load_dotenv # Added
+from firebase_functions.tracker_logic import get_wallet_gas_report # Added
 
-# Attempt to import the main report generation function from tracker.py
-try:
-    from tracker import get_wallet_gas_report
-except ImportError:
-    # This might happen if tracker.py is not yet created or has issues
-    # For now, define a placeholder if tracker is not available
-    print("Warning: Could not import get_wallet_gas_report from tracker.py. Using placeholder.")
-    def get_wallet_gas_report(wallet_address: str):
-        # Placeholder data structure matching what results.html might expect
-        return {
-            "wallet_address": wallet_address,
-            "current_l2_gas_price_gwei": "N/A (tracker not loaded)",
-            "current_eth_usd_price": "N/A (tracker not loaded)",
-            "gas_summary": {
-                "all_time": {"eth": "0 ETH", "usd": "$0 USD", "wei": 0},
-                "last_30_days": {"eth": "0 ETH", "usd": "$0 USD", "wei": 0},
-                "last_7_days": {"eth": "0 ETH", "usd": "$0 USD", "wei": 0},
-            },
-            "transactions": [],
-            "graph_url": None,
-            "error_messages": ["Tracker module could not be loaded. Displaying placeholder data."]
-        }
+# Load environment variables from .env file at the project root
+# This is for running app.py locally.
+# The firebase_functions/tracker_logic.py itself also calls load_dotenv(),
+# which is fine; subsequent calls don't overwrite existing env vars by default.
+# If firebase_functions/.env exists, it might be loaded by tracker_logic.
+# If a root .env exists, it's loaded here for app.py context.
+load_dotenv()
+
 
 # Create a Flask application instance
 # Flask will automatically look for 'static' and 'templates' folders
 # in the same directory as this app.py file.
 app = Flask(__name__)
 
-# Ensure the static/images directory exists for graph outputs
+# Ensure the static/images directory exists for graph outputs (if still needed by any part)
+# Graph is now base64, so direct file saving to static/images from tracker_logic might be removed.
+# However, keeping this doesn't hurt if other static assets are planned.
 static_images_dir = os.path.join(app.static_folder, 'images')
 os.makedirs(static_images_dir, exist_ok=True)
 
@@ -67,12 +59,33 @@ def track_wallet_route():
 
     print(f"Received wallet address: {wallet_address_input}") # For debugging
     
-    # Call the main logic function from tracker.py
-    # This function is expected to return a dictionary with all necessary data
-    report_data = get_wallet_gas_report(wallet_address_input)
+    try:
+        # Call the local backend logic directly
+        # The get_wallet_gas_report function in firebase_functions.tracker_logic
+        # already handles loading .env from within its own directory if needed
+        # via its own load_dotenv() call.
+        # The load_dotenv() at the top of app.py is for app.py's own potential env var needs
+        # or to ensure a root .env is loaded if tracker_logic doesn't find firebase_functions/.env
+        report_data = get_wallet_gas_report(wallet_address_input)
+    except Exception as e:
+        print(f"Error calling get_wallet_gas_report directly: {e}")
+        # Create a basic error structure similar to what was expected before
+        report_data = {
+            "wallet_address": wallet_address_input,
+            "current_l2_gas_price_gwei": "N/A",
+            "current_eth_usd_price": "N/A",
+            "gas_summary": {
+                "all_time": {"eth": "0 ETH", "usd": "$0 USD", "wei": 0},
+                "last_30_days": {"eth": "0 ETH", "usd": "$0 USD", "wei": 0},
+                "last_7_days": {"eth": "0 ETH", "usd": "$0 USD", "wei": 0},
+            },
+            "transactions": [],
+            "graph_data_base64": None, # Ensure this matches what results.html expects
+            "error_messages": [f"Error processing your request: {str(e)}"]
+        }
     
     # The report_data dictionary itself is passed as keyword arguments to render_template.
-    # Utility functions like wei_to_ether_str are now applied in tracker.py before this point,
+    # Utility functions like wei_to_ether_str are now applied in tracker_logic.py before this point,
     # so they don't need to be passed to the template context directly for the main data.
     return render_template('results.html', **report_data)
 
