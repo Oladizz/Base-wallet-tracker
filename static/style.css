@@ -363,3 +363,25 @@ code {
     visibility: hidden;
     */
 }
+
+/* Footer styles */
+footer {
+    text-align: center;
+    padding: 20px 0;
+    margin-top: 30px; /* Space above the footer */
+    border-top: 1px solid var(--border-color); /* Neon line above footer */
+    color: var(--text-color); /* General text color for footer */
+    font-size: 0.9em;
+    position: relative; /* To ensure it's above particles.js if particles.js isn't fixed or has a lower z-index */
+    z-index: 1; /* Same as .container, so it's above particles.js */
+}
+
+footer p {
+    margin: 0;
+    line-height: 1.5; /* Adjust line height for <br> */
+}
+
+footer strong {
+    color: var(--neon-blue); /* Make strong text neon blue */
+    font-weight: 500; /* Orbitron's 500 weight is good for emphasis */
+}
