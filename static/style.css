@@ -1,3 +1,7 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 /* Import Orbitron font */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap');
 
@@ -234,9 +238,10 @@ code {
     h2 {
         font-size: 1.5em;
     }
-    /* Add more responsive table handling if needed, e.g., horizontal scroll */
+    /* Responsive table handling: Horizontal scroll */
+    /* Remove or comment out previous stacking rules:
     table, thead, tbody, th, td, tr {
-        display: block; /* Stack table elements */
+        display: block; 
     }
     thead tr {
         position: absolute;
@@ -250,29 +255,74 @@ code {
     }
     td {
         border: none;
-        border-bottom: 1px dotted var(--border-color); /* Dotted lines between fields in stacked view */
+        border-bottom: 1px dotted var(--border-color); 
         position: relative;
-        padding-left: 50%; /* Space for label */
-        white-space: normal; /* Allow text to wrap in stacked view */
+        padding-left: 50%; 
+        white-space: normal; 
         text-align: right;
     }
     td:before {
         position: absolute;
-        top: 12px; /* Adjust alignment */
-        left: 12px; /* Adjust alignment */
+        top: 12px;
+        left: 12px;
         width: 45%;
         padding-right: 10px;
         white-space: nowrap;
         text-align: left;
         font-weight: bold;
         color: var(--neon-blue);
-        /* Dynamically add labels - requires JS or hardcoding for each column if not using JS */
-        /* Example for first column (Hash): content: "Hash:"; */
     }
-    /* You'd need to specify content for each td:before based on its column,
-       or use a more advanced JS solution for responsive tables if this CSS-only approach is too limited.
-       For now, this provides basic stacking.
     */
+
+    .table-responsive-wrapper {
+        overflow-x: auto;  /* Enables horizontal scrolling */
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        margin-bottom: 15px; /* Add some space below the scrollable table */
+        /* The wrapper itself should not have a border or shadow if the table inside has it */
+        /* Ensure the inner table's border/shadow is visible */
+        border-radius: var(--curved-radius); /* Optional: if you want the scrollbar area to also look curved */
+        /* Adding a subtle visual cue for scrolling if content is clipped, though not always reliable */
+        /* box-shadow: inset -5px 0 5px -5px var(--neon-blue-glow), inset 5px 0 5px -5px var(--neon-blue-glow); */
+    }
+
+    /* Ensure the table uses its natural width, or a defined min-width */
+    .table-responsive-wrapper table {
+        /* min-width: 600px; /* Example: Adjust as needed, or remove if not necessary */
+        /* The table will maintain its defined styles (border, radius etc.) from the non-responsive part */
+        /* If stacking styles were applied directly to table, reset them: */
+        display: table; /* Reset display if it was changed to block */
+        border-collapse: separate; /* Or 'collapse' based on your main style */
+        border-spacing: 0;
+    }
+     /* If th, td were set to display:block, reset them */
+    .table-responsive-wrapper th,
+    .table-responsive-wrapper td {
+        display: table-cell;
+        white-space: nowrap; /* Prevent text wrapping in cells to encourage scrolling */
+        /* Reset any padding/border changes from stacking, if necessary */
+        padding: 12px; /* Restore original padding */
+        text-align: left; /* Restore original text-align */
+        border-bottom: 1px solid var(--border-color); /* Restore original borders */
+    }
+    .table-responsive-wrapper tr {
+        display: table-row; /* Reset display */
+        /* Reset any border/margin changes from stacking */
+        border: none;
+        margin-bottom: 0;
+    }
+    .table-responsive-wrapper thead tr { /* Reset thead tr hiding */
+        position: static;
+    }
+     /* Ensure last cell in a row doesn't have double border if you added border-right to cells */
+    .table-responsive-wrapper th:last-child,
+    .table-responsive-wrapper td:last-child {
+        border-right: none; 
+    }
+    .table-responsive-wrapper tr:last-child td {
+        border-bottom: none; /* This was already there, good */
+    }
+
+
 }
 
 /* Loader styles */

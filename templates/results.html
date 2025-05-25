@@ -82,6 +82,7 @@
         <div class="section" id="recent-transactions">
             <h2>Recent Transactions (Up to 20)</h2>
             {% if transactions %}
+            <div class="table-responsive-wrapper">
                 <table>
                     <thead>
                         <tr>
@@ -112,6 +113,7 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
             {% else %}
                 <p class="text-center">No transactions found for this address, or an error occurred while fetching them.</p>
             {% endif %}
