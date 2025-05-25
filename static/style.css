@@ -1,301 +1,315 @@
-/* static/style.css */
+/* Import Orbitron font */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap');
 
-/* Overall Page Style */
-body {
-    background-color: #1a1a1a; /* Very dark grey */
-    color: #e0e0e0; /* Light grey for default text */
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 0;
-    line-height: 1.6;
+/* Define color variables (optional, but good practice) */
+:root {
+    --background-color: #000000;
+    --text-color: #E0E0E0; /* Light grey for general text */
+    --neon-blue: #00E5FF; /* Bright cyan/aqua for neon effect */
+    --neon-blue-glow: rgba(0, 229, 255, 0.5);
+    --container-bg: #1A1A1A; /* Dark grey for containers */
+    --border-color: var(--neon-blue);
+    --link-color: var(--neon-blue);
+    --link-hover-color: #FFFFFF;
+    --shadow-color: rgba(0, 229, 255, 0.3); /* Shadow for neon glow */
+    --error-color: #FF4C4C;
+    --curved-radius: 20px; /* "Very curved" radius */
 }
 
-/* Container for main content */
+/* General body styling */
+body {
+    font-family: 'Orbitron', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+    position: relative; /* Ensure body acts as a reference for absolutely positioned children if needed, though particles-js is fixed */
+    z-index: 0; /* Establish a stacking context */
+}
+
+/* particles.js container */
+#particles-js {
+    position: fixed; /* Changed from absolute to fixed for true background */
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: -1; /* Ensure it's behind other content */
+    background-color: var(--background-color); /* Fallback if particles don't load */
+}
+
 .container {
     width: 80%;
-    max-width: 900px; /* Max width for larger screens */
+    position: relative; /* To ensure it sits above the fixed particles-js background */
+    z-index: 1; /* Higher z-index than particles-js */
+    background-color: var(--container-bg); /* Already set, good */
+    max-width: 1000px;
     margin: 20px auto;
-    padding: 20px;
-    background-color: #2c2c2c; /* Darker shade for content background */
-    border-radius: 8px;
-    box-shadow: 0 0 15px rgba(0, 191, 255, 0.3); /* Neon blue glow for container */
-    border: 1px solid #00bfff; /* DeepSkyBlue border */
+    padding: 25px;
+    background-color: var(--container-bg);
+    border-radius: var(--curved-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 0 15px var(--shadow-color), 0 0 30px var(--shadow-color);
 }
 
 /* Headings */
-h1, h2, h3 {
-    color: #00bfff; /* DeepSkyBlue for headings */
-    text-shadow: 0 0 5px rgba(0, 191, 255, 0.7); /* Neon glow for headings */
-}
-
-h1 {
+h1, h2 {
+    color: var(--neon-blue);
     text-align: center;
-    margin-bottom: 30px;
-    font-size: 2.5em;
+    text-shadow: 0 0 5px var(--neon-blue-glow), 0 0 10px var(--neon-blue-glow);
+    margin-bottom: 20px;
 }
-
+h1 {
+    font-size: 2.5em; /* Orbitron is quite impactful */
+    font-weight: 700;
+}
 h2 {
-    border-bottom: 1px solid #007bff; /* A slightly darker blue for underlines */
-    padding-bottom: 10px;
-    margin-top: 25px;
-    margin-bottom: 15px;
     font-size: 1.8em;
+    font-weight: 500;
+    margin-top: 30px; /* Space above section titles */
 }
 
 /* Links */
 a {
-    color: #00ffff; /* Aqua/Cyan for links */
+    color: var(--link-color);
     text-decoration: none;
     transition: color 0.3s ease, text-shadow 0.3s ease;
 }
-
 a:hover, a:focus {
-    color: #ffffff;
-    text-shadow: 0 0 8px rgba(0, 255, 255, 0.8); /* Brighter glow on hover */
+    color: var(--link-hover-color);
+    text-shadow: 0 0 8px var(--link-hover-color);
 }
 
-/* Form Elements */
+/* Form elements */
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+form div {
+    width: 100%;
+    max-width: 500px; /* Limit width of form elements */
+}
 label {
     display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-    color: #00bfff; /* Neon blue for labels */
+    margin-bottom: 5px;
+    color: var(--neon-blue);
+    font-weight: 500;
 }
-
-input[type="text"],
-textarea { /* Added textarea for potential future use */
-    width: calc(100% - 24px); /* Full width minus padding and border */
-    padding: 12px;
-    margin-bottom: 20px;
-    background-color: #101010; /* Very dark input background */
-    border: 1px solid #00bfff; /* Neon blue border */
-    border-radius: 5px;
-    color: #e0e0e0; /* Light text color for input */
-    font-size: 1em;
-    box-shadow: inset 0 0 5px rgba(0, 191, 255, 0.3); /* Inner neon glow */
+input[type="text"] {
+    width: calc(100% - 22px); /* Account for padding and border */
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--curved-radius);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    font-family: 'Orbitron', sans-serif;
+    box-shadow: inset 0 0 5px var(--shadow-color);
 }
-
-input[type="text"]:focus,
-textarea:focus {
-    outline: none;
-    border-color: #00ffff; /* Brighter neon blue on focus */
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), inset 0 0 8px rgba(0, 255, 255, 0.4);
-}
-
-input[type="submit"],
-button { /* Style generic buttons too */
-    background-color: transparent;
-    color: #00ffff; /* Aqua/Cyan text */
+input[type="submit"], .back-link {
+    display: inline-block;
     padding: 10px 20px;
-    border: 2px solid #00ffff; /* Aqua/Cyan border */
-    border-radius: 5px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--curved-radius);
+    background-color: transparent; /* Neon outline style */
+    color: var(--neon-blue);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1em;
+    font-weight: 500;
+    text-align: center;
     cursor: pointer;
-    font-size: 1.1em;
-    font-weight: bold;
     transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    box-shadow: 0 0 5px var(--shadow-color);
+}
+input[type="submit"]:hover, .back-link:hover {
+    background-color: var(--neon-blue);
+    color: var(--background-color); /* Text color changes to dark for contrast */
+    box-shadow: 0 0 15px var(--neon-blue-glow), 0 0 25px var(--neon-blue-glow);
 }
 
-input[type="submit"]:hover,
-button:hover {
-    background-color: #00ffff; /* Aqua/Cyan background on hover */
-    color: #1a1a1a; /* Dark text on hover */
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.7), 0 0 5px rgba(0, 255, 255, 0.5) inset;
+/* Sections on results page */
+.section {
+    background-color: rgba(26, 26, 26, 0.7); /* Slightly more transparent container sections */
+    padding: 20px;
+    margin-bottom: 25px;
+    border-radius: var(--curved-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 0 10px var(--shadow-color);
+}
+.section h2 {
+    margin-top: 0; /* Remove top margin for h2 inside .section */
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
 }
 
-/* Table Styling */
+/* Table styling */
 table {
     width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    box-shadow: 0 0 10px rgba(0, 191, 255, 0.2);
+    border-collapse: separate; /* Use separate for border-radius on cells if needed, or on table */
+    border-spacing: 0;
+    margin-top: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--curved-radius);
+    box-shadow: 0 0 8px var(--shadow-color);
+    overflow: hidden; /* Important for border-radius on table */
 }
-
 th, td {
+    padding: 12px;
     text-align: left;
-    padding: 12px 15px; /* Increased padding */
-    border: 1px solid #007bff; /* Slightly darker blue for table cell borders */
+    border-bottom: 1px solid var(--border-color); /* Horizontal lines */
+    /* For vertical lines, add: border-right: 1px solid var(--border-color); */
 }
-
-thead th {
-    background-color: #003366; /* Dark blue for table header */
-    color: #00ffff; /* Aqua/Cyan text for header */
-    font-size: 1.1em;
-    text-shadow: 0 0 3px rgba(0, 255, 255, 0.5);
+th {
+    background-color: var(--neon-blue); /* Header background */
+    color: var(--background-color); /* Header text */
+    font-weight: 700;
+    text-shadow: none; /* No glow for header text for readability */
 }
-
-tbody tr:nth-child(even) {
-    background-color: #252525; /* Slightly lighter dark for even rows */
+/* Remove bottom border from last row's cells */
+tr:last-child td {
+    border-bottom: none;
 }
-
-tbody tr:hover {
-    background-color: #004080; /* Darker blue on row hover */
-    color: #ffffff;
-}
-
-/* Section styling for results page */
-.section {
-    margin-bottom: 30px;
-    padding: 20px;
-    background-color: #222; /* Slightly lighter than main content bg for contrast */
-    border: 1px solid #007bff;
+/* Style for <code> tags (used for addresses) */
+code {
+    font-family: 'Orbitron', monospace; /* Keep monospace feel for addresses */
+    background-color: rgba(0,0,0,0.3);
+    padding: 2px 5px;
     border-radius: 5px;
-    box-shadow: 0 0 8px rgba(0, 123, 255, 0.2);
+    color: var(--neon-blue);
+    /* Text overflow handling for code elements (if truncation isn't enough elsewhere) */
+    display: inline-block; /* Needed for max-width and text-overflow */
+    max-width: 100%; /* Ensure it doesn't break parent */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap; /* Essential for ellipsis */
+    vertical-align: middle; /* Align better with surrounding text */
 }
 
-.section h2 { /* Overriding default h2 for sections if needed */
-    margin-top: 0;
-    padding-bottom: 8px;
-    font-size: 1.5em; /* Slightly smaller for section titles */
-    border-bottom-color: #00bfff; /* Consistent neon blue underline */
+/* Error messages */
+.error-message, .error-message-section p.error-message {
+    color: var(--error-color);
+    background-color: rgba(255, 76, 76, 0.1);
+    border: 1px solid var(--error-color);
+    padding: 10px;
+    border-radius: var(--curved-radius);
+    margin-bottom: 15px;
+    text-shadow: 0 0 5px rgba(255, 76, 76, 0.5);
+}
+.error-message-section h2 { /* Make error section title also error colored */
+    color: var(--error-color);
+    text-shadow: 0 0 5px rgba(255, 76, 76, 0.5);
+    border-bottom-color: var(--error-color);
 }
 
 /* Graph container */
 .graph-container {
-    text-align: center;
-    margin-bottom: 20px;
+    text-align: center; /* Center the image */
     padding: 10px;
-    background-color: #101010; /* Dark background for graph area */
-    border: 1px solid #00bfff;
-    border-radius: 4px;
+    background-color: rgba(0,0,0,0.2); /* Slight background for graph if image is transparent */
+    border-radius: var(--curved-radius);
+    margin-top: 15px;
 }
-
 .graph-container img {
     max-width: 100%;
     height: auto;
-    border-radius: 4px; /* Image itself doesn't need another border if container has one */
+    border-radius: 10px; /* Optional: if image itself should have rounded corners */
 }
 
-/* Error messages */
-.error-message {
-    color: #ff4d4d; /* Neon Red for errors */
-    background-color: #330000; /* Dark red background */
-    border: 1px solid #ff4d4d;
-    padding: 10px;
-    margin-top: 15px;
-    margin-bottom: 15px;
-    border-radius: 4px;
-    text-align: center;
-    text-shadow: 0 0 5px rgba(255, 77, 77, 0.7);
-}
-
-/* Utility classes */
+/* Text center utility (if needed) */
 .text-center {
     text-align: center;
 }
 
-.mt-20 {
-    margin-top: 20px;
-}
-
-/* Basic Responsiveness */
+/* Responsive adjustments */
 @media (max-width: 768px) {
     .container {
         width: 95%;
-        margin: 10px auto;
+        padding: 15px;
     }
-
     h1 {
         font-size: 2em;
     }
-
     h2 {
         font-size: 1.5em;
     }
-    
-    input[type="text"],
-    input[type="submit"],
-    button {
-        font-size: 0.95em; /* Slightly smaller form elements */
+    /* Add more responsive table handling if needed, e.g., horizontal scroll */
+    table, thead, tbody, th, td, tr {
+        display: block; /* Stack table elements */
     }
-
-    table, thead, tbody, th, td, tr { 
-		display: block; 
-	}
-	
-	thead tr { 
-		position: absolute;
-		top: -9999px;
-		left: -9999px;
-	}
-	
-	tr { border: 1px solid #007bff; margin-bottom:5px; }
-	
-	td { 
-		border: none;
-		border-bottom: 1px solid #333; /* Lighter line for stacked cells */
-		position: relative;
-		padding-left: 50%; /* Space for data label */
-        white-space: normal;
+    thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+    tr {
+        border: 1px solid var(--border-color);
+        border-radius: var(--curved-radius);
+        margin-bottom: 10px;
+    }
+    td {
+        border: none;
+        border-bottom: 1px dotted var(--border-color); /* Dotted lines between fields in stacked view */
+        position: relative;
+        padding-left: 50%; /* Space for label */
+        white-space: normal; /* Allow text to wrap in stacked view */
         text-align: right;
-	}
-	
-	td:before { 
-		position: absolute;
-		top: 12px; /* Adjusted for padding */
-		left: 15px; /* Adjusted for padding */
-		width: 45%; 
-		padding-right: 10px; 
-		white-space: nowrap;
+    }
+    td:before {
+        position: absolute;
+        top: 12px; /* Adjust alignment */
+        left: 12px; /* Adjust alignment */
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
         text-align: left;
         font-weight: bold;
-        color: #00bfff; /* Label color */
-	}
-
-    /* Label content for each cell */
-    td:nth-of-type(1):before { content: "Hash:"; }
-    td:nth-of-type(2):before { content: "Timestamp:"; }
-    td:nth-of-type(3):before { content: "Gas Fee (ETH):"; }
-    td:nth-of-type(4):before { content: "To:"; }
-}
-
-@media (max-width: 480px) {
-    h1 {
-        font-size: 1.8em;
+        color: var(--neon-blue);
+        /* Dynamically add labels - requires JS or hardcoding for each column if not using JS */
+        /* Example for first column (Hash): content: "Hash:"; */
     }
-    h2 {
-        font-size: 1.3em;
+    /* You'd need to specify content for each td:before based on its column,
+       or use a more advanced JS solution for responsive tables if this CSS-only approach is too limited.
+       For now, this provides basic stacking.
+    */
+}
+
+/* Loader styles */
+#loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85); /* Dark overlay, slightly transparent */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* Ensure it's on top of everything, including particles.js */
+    transition: opacity 0.5s ease-out; /* For fade out */
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid rgba(0, 229, 255, 0.3); /* Light neon blue for the track */
+    border-top-color: var(--neon-blue); /* Neon blue for the spinning part */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
     }
-    .section h2 {
-        font-size: 1.2em;
-    }
 }
 
-/* Back link on results page */
-.back-link {
-    display: block;
-    text-align: center;
-    margin-top: 30px;
-    padding: 10px;
-    background-color: #007bff; /* Button-like appearance */
-    color: white; /* Text color for this specific link */
-    border-radius: 4px;
-    transition: background-color 0.3s ease;
-    font-weight: bold;
-    border: 1px solid #00bfff;
-}
-.back-link:hover {
-    background-color: #0056b3;
-    color: white; /* Ensure text color remains white on hover */
-    text-shadow: none; /* Remove general link text-shadow for this button-like link */
-}
-
-/* Style for the error message in index.html if wallet address is invalid */
-.form-error { /* Assuming error is displayed within the form or container */
-    color: #ff4d4d; /* Neon Red */
-    font-size: 0.9em;
-    margin-top: -10px; /* Adjust to position it below the input */
-    margin-bottom: 15px;
-    text-align: left; /* Or center, depending on placement */
-}
-
-/* Code blocks within text */
-code {
-    background-color: #101010;
-    color: #00ffff; /* Aqua for code text */
-    padding: 2px 5px;
-    border-radius: 3px;
-    border: 1px solid #007bff;
-    font-family: 'Courier New', Courier, monospace;
+/* Class to hide loader */
+.hidden {
+    display: none !important; /* Use !important to ensure it overrides initial display:flex */
+    /* Or, for fade out:
+    opacity: 0;
+    visibility: hidden;
+    */
 }
